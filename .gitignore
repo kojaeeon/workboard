@@ -1,0 +1,12 @@
+.reference/
+frontend/node_modules/
+frontend/dist/
+backend/target/
+data/
+.env
+output/
+*.log
+.playwright-cli/
+backend/data/
+images/
+backend/images/

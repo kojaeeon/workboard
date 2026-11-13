@@ -1,0 +1,11 @@
+.reference
+frontend/public/vendor
+frontend/src/vendor
+frontend/src/MindMapEditor.js
+frontend/src/Calendar.js
+frontend/src/features/documents/mermaidFullscreen.js
+frontend/src/features/documents/searchOverview.js
+frontend/tests/fixtures
+examples
+output
+data

@@ -1,0 +1,217 @@
+{
+  "version": 1,
+  "root": "root",
+  "nodes": [
+    {
+      "id": "root",
+      "label": "고객 관리 서비스",
+      "type": "서비스",
+      "description": "",
+      "file": "",
+      "overrides": {
+        "background": null,
+        "color": null,
+        "border_color": null,
+        "font_size": null,
+        "shape": null,
+        "icon": null
+      },
+      "expanded": true
+    },
+    {
+      "id": "controller",
+      "label": "CustomerController",
+      "type": "Controller",
+      "description": "",
+      "file": "src/main/java/customer/CustomerController.java",
+      "overrides": {
+        "background": null,
+        "color": null,
+        "border_color": null,
+        "font_size": null,
+        "shape": null,
+        "icon": null
+      },
+      "expanded": true
+    },
+    {
+      "id": "service",
+      "label": "CustomerService",
+      "type": "Service",
+      "description": "고객 조회와 검증 로직",
+      "file": "src/main/java/customer/CustomerService.java",
+      "overrides": {
+        "background": null,
+        "color": null,
+        "border_color": null,
+        "font_size": null,
+        "shape": null,
+        "icon": null
+      },
+      "expanded": true
+    },
+    {
+      "id": "mapper",
+      "label": "CustomerMapper",
+      "type": "Mapper",
+      "description": "",
+      "file": "src/main/resources/mappers/CustomerMapper.xml",
+      "overrides": {
+        "background": null,
+        "color": null,
+        "border_color": null,
+        "font_size": null,
+        "shape": null,
+        "icon": null
+      },
+      "expanded": true
+    },
+    {
+      "id": "screen",
+      "label": "CustomerSearch",
+      "type": "화면",
+      "description": "",
+      "file": "src/main/webapp/customer/CustomerSearch.xfdl",
+      "overrides": {
+        "background": null,
+        "color": null,
+        "border_color": null,
+        "font_size": null,
+        "shape": null,
+        "icon": null
+      },
+      "expanded": true
+    },
+    {
+      "id": "table",
+      "label": "CUSTOMER",
+      "type": "테이블",
+      "description": "",
+      "file": "",
+      "overrides": {
+        "background": null,
+        "color": null,
+        "border_color": null,
+        "font_size": null,
+        "shape": null,
+        "icon": null
+      },
+      "expanded": true
+    },
+    {
+      "id": "test",
+      "label": "고객 조회 시나리오",
+      "type": "테스트",
+      "description": "",
+      "file": "",
+      "overrides": {
+        "background": null,
+        "color": null,
+        "border_color": null,
+        "font_size": null,
+        "shape": null,
+        "icon": null
+      },
+      "expanded": true
+    }
+  ],
+  "edges": [
+    {
+      "id": "e0",
+      "source": "root",
+      "target": "controller",
+      "label": "",
+      "kind": "계층",
+      "tree": true,
+      "color": "#b89a60",
+      "dashed": false,
+      "bidirectional": false
+    },
+    {
+      "id": "e1",
+      "source": "root",
+      "target": "service",
+      "label": "",
+      "kind": "계층",
+      "tree": true,
+      "color": "#b89a60",
+      "dashed": false,
+      "bidirectional": false
+    },
+    {
+      "id": "e2",
+      "source": "root",
+      "target": "mapper",
+      "label": "",
+      "kind": "계층",
+      "tree": true,
+      "color": "#b89a60",
+      "dashed": false,
+      "bidirectional": false
+    },
+    {
+      "id": "e3",
+      "source": "controller",
+      "target": "screen",
+      "label": "",
+      "kind": "계층",
+      "tree": true,
+      "color": "#b89a60",
+      "dashed": false,
+      "bidirectional": false
+    },
+    {
+      "id": "e4",
+      "source": "mapper",
+      "target": "table",
+      "label": "",
+      "kind": "계층",
+      "tree": true,
+      "color": "#b89a60",
+      "dashed": false,
+      "bidirectional": false
+    },
+    {
+      "id": "e5",
+      "source": "service",
+      "target": "test",
+      "label": "",
+      "kind": "계층",
+      "tree": true,
+      "color": "#b89a60",
+      "dashed": false,
+      "bidirectional": false
+    },
+    {
+      "id": "call1",
+      "source": "controller",
+      "target": "service",
+      "label": "호출",
+      "kind": "호출",
+      "tree": false,
+      "color": "#b89a60",
+      "dashed": true,
+      "bidirectional": false
+    },
+    {
+      "id": "call2",
+      "source": "service",
+      "target": "mapper",
+      "label": "조회",
+      "kind": "조회",
+      "tree": false,
+      "color": "#b89a60",
+      "dashed": true,
+      "bidirectional": false
+    }
+  ],
+  "summaries": [],
+  "view": {
+    "direction": 1,
+    "scale": 1,
+    "pan_x": 0,
+    "pan_y": 0,
+    "scroll_left": 0,
+    "scroll_top": 0
+  }
+}
