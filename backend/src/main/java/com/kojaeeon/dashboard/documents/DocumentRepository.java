@@ -52,6 +52,30 @@ public class DocumentRepository {
     db.sql("DELETE FROM documents WHERE id=:id").param("id", id).update();
   }
 
+  public Document get(long id) {
+    return db
+      .sql("SELECT * FROM documents WHERE id=:id")
+      .param("id", id)
+      .query(Document.class)
+      .optional()
+      .orElseThrow(() -> new IllegalArgumentException("저장 문서를 찾을 수 없습니다."));
+  }
+
+  public void saveIfUnchanged(long id, String title, String content, String original) {
+    int count = db
+      .sql(
+        "UPDATE documents SET title=:title,content=:content,updated_at=CURRENT_TIMESTAMP WHERE id=:id AND content=:original"
+      )
+      .param("title", title)
+      .param("content", content)
+      .param("id", id)
+      .param("original", original)
+      .update();
+    if (count != 1) throw new com.kojaeeon.dashboard.shared.ApiErrors.Conflict(
+      "다른 화면에서 MD가 변경되었습니다. 다시 열어 확인하세요."
+    );
+  }
+
   public List<Folder> folders() {
     return db.sql("SELECT id,path FROM folders ORDER BY path").query(Folder.class).list();
   }

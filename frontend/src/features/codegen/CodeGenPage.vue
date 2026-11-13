@@ -2,6 +2,12 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { api, act, error } from '../../shared/api'
 import CodeBlock from '../../shared/CodeBlock.vue'
+import type { QueryResult } from '../database/types'
+const props = defineProps<{ queryId?: string | null }>()
+const emit = defineEmits<{ 'clear-query': [] }>()
+const querySource = ref<QueryResult>(),
+  queryLoading = ref(false),
+  warnings = ref<string[]>([])
 interface Source {
   key: string
   label: string
@@ -24,6 +30,7 @@ interface Preview {
   archiveName: string
   files: GeneratedFile[]
   status: string
+  warnings?: string[]
 }
 const sources = ref<Source[]>([]),
   selectedMd = ref<string | null>(null),
@@ -51,6 +58,7 @@ function invalidate() {
   files.value = []
   selectedPath.value = ''
   generationId.value = ''
+  warnings.value = []
   status.value = '입력이 변경되었습니다. 코드 미리보기를 실행하세요.'
 }
 watch(form, invalidate, { deep: true, flush: 'sync' })
@@ -100,22 +108,32 @@ async function applyMd(key: string | null) {
   })
 }
 async function generate() {
+  if (props.queryId && !querySource.value) {
+    error(new Error('DB조회에서 결과를 다시 전달하세요.'))
+    return
+  }
   busy.value = true
   const version = inputVersion
   try {
     await act(async () => {
       try {
-        const result = await api<Preview>('/codegen/preview', 'POST', {
+        const request = {
           ...form,
           targets: ['Controller', 'Service', 'VO', 'Mapper'].filter((target) =>
             form.targets.includes(target),
           ),
-        })
+        }
+        const result = await api<Preview>(
+          props.queryId ? '/codegen/query-preview' : '/codegen/preview',
+          'POST',
+          props.queryId ? { queryId: props.queryId, request } : request,
+        )
         if (version !== inputVersion) return
         files.value = result.files
         selectedPath.value = result.files[0]?.path || ''
         generationId.value = result.id
         status.value = result.status
+        warnings.value = result.warnings || []
       } catch (e) {
         files.value = []
         selectedPath.value = ''
@@ -128,16 +146,71 @@ async function generate() {
     busy.value = false
   }
 }
+let queryVersion = 0
+watch(
+  () => props.queryId,
+  async (id) => {
+    const version = ++queryVersion
+    invalidate()
+    querySource.value = undefined
+    queryLoading.value = false
+    if (!id) return
+    queryLoading.value = true
+    try {
+      const result = await api<QueryResult>('/database/results/' + encodeURIComponent(id))
+      if (version !== queryVersion) return
+      querySource.value = result
+      Object.assign(form, {
+        table_name: result.workItem.table || '',
+        service_name: result.workItem.service || '',
+        service_korean_name: result.workItem.serviceNm || '',
+        package_path: result.workItem.package_path || '',
+      })
+      status.value = 'DB 조회 결과를 받았습니다. 생성 정보를 확인하고 코드 미리보기를 실행하세요.'
+    } catch (e) {
+      if (version === queryVersion) {
+        status.value = '조회 결과를 불러오지 못했습니다. DB조회에서 다시 실행하세요.'
+        error(e)
+      }
+    } finally {
+      if (version === queryVersion) queryLoading.value = false
+    }
+  },
+  { immediate: true },
+)
 onMounted(refresh)
 </script>
 <template>
   <section class="page">
     <div class="eyebrow">TEMPLATE · CODE GENERATOR</div>
     <div class="page-title">Code Gen</div>
-    <p class="muted page-subtitle">테이블과 서비스 정보를 입력하고 생성할 코드를 확인하세요.</p>
+    <p class="muted page-subtitle">
+      {{
+        props.queryId
+          ? '실제 DB 조회 결과의 컬럼·자료형·PK로 코드를 생성합니다.'
+          : '테이블과 서비스 정보를 입력하고 생성할 코드를 확인하세요.'
+      }}
+    </p>
+    <q-banner v-if="props.queryId" class="query-source full-width"
+      ><div class="text-h6">DB 조회 결과 사용 · {{ querySource?.title || '불러오는 중' }}</div>
+      <div v-if="querySource">
+        {{ querySource.databaseType.toUpperCase() }} ·
+        {{
+          querySource.codegen.mode === 'metadata'
+            ? `${querySource.rows.length}행의 컬럼 메타데이터`
+            : `SELECT 결과 ${querySource.columns.length}컬럼`
+        }}
+        · 조회 ID {{ querySource.id.slice(0, 8) }}
+      </div>
+      <div>
+        생성 시 SQL을 재실행하지 않고 이 조회 결과를 사용합니다. Mapper 선택 시 Java 인터페이스와
+        XML을 함께 생성합니다.
+      </div>
+      <q-btn flat label="샘플 모드로 전환" :disable="busy" @click="emit('clear-query')"
+    /></q-banner>
     <div class="codegen-layout">
       <div class="column codegen-input column-gap">
-        <q-card class="column column-gap full-width"
+        <q-card v-if="!props.queryId" class="column column-gap full-width"
           ><div class="text-h6">MD에서 자동 입력</div>
           <div class="row items-center full-width" style="gap: 8px">
             <q-select
@@ -213,9 +286,14 @@ onMounted(refresh)
             color="primary"
             label="코드 미리보기"
             icon="code"
-            :loading="busy"
+            :loading="busy || queryLoading"
+            :disable="queryLoading || (!!props.queryId && !querySource)"
             @click="generate"
-          /><span class="text-caption muted">현재는 샘플 템플릿으로 표시합니다.</span></q-card
+          /><span class="text-caption muted">{{
+            props.queryId
+              ? 'DB 조회 결과 기반 템플릿 · 생성 코드는 대상 프로젝트의 MyBatis·DB 설정과 함께 사용하세요.'
+              : '현재는 샘플 템플릿으로 표시합니다.'
+          }}</span></q-card
         >
       </div>
       <div class="column codegen-output column-gap">
@@ -259,13 +337,22 @@ onMounted(refresh)
           ><template v-else
             ><div class="text-h6">코드 미리보기</div>
             <span class="muted">생성 정보를 입력하고 미리보기를 실행하세요.</span></template
-          ><span class="muted">{{ status }}</span></q-card
+          ><span class="muted">{{ status }}</span
+          ><q-banner v-if="warnings.length" class="generation-warnings full-width"
+            ><div v-for="warning in warnings" :key="warning">{{ warning }}</div></q-banner
+          ></q-card
         >
       </div>
     </div>
   </section>
 </template>
 <style scoped>
+.query-source,
+.generation-warnings {
+  border: 1px solid #b89a6040;
+  border-radius: 12px;
+  background: #b89a6012;
+}
 .codegen-layout {
   display: flex;
   gap: 20px;

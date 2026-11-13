@@ -32,6 +32,14 @@ public class CodeGenController {
     return service.preview(request);
   }
 
+  public record QueryGeneration(String queryId, GenerationRequest request) {}
+
+  @PostMapping("/query-preview")
+  public CodeGenService.Preview queryPreview(@RequestBody QueryGeneration input) {
+    if (input.request() == null) throw new IllegalArgumentException("생성 정보를 입력하세요.");
+    return service.previewFromQuery(input.queryId(), input.request());
+  }
+
   @GetMapping("/previews/{id}/zip")
   public ResponseEntity<byte[]> zip(@PathVariable String id) {
     var preview = service.get(id);

@@ -1,5 +1,6 @@
 package com.kojaeeon.dashboard.codegen;
 
+import com.kojaeeon.dashboard.database.QueryResultStore;
 import com.kojaeeon.dashboard.shared.Frontmatter;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -14,18 +15,34 @@ public class CodeGenService {
     String id,
     String archiveName,
     List<CodeGenerator.GeneratedFile> files,
-    String status
+    String status,
+    List<String> warnings,
+    String queryId
   ) {}
 
   public record Inputs(GenerationRequest values, String yaml) {}
 
   private final CodeGenerator generator;
   private final Frontmatter frontmatter;
+  private QueryCodeGenerator queryGenerator;
+  private QueryResultStore queryResults;
   private final LinkedHashMap<String, Preview> previews = new LinkedHashMap<>();
 
   public CodeGenService(CodeGenerator generator, Frontmatter frontmatter) {
     this.generator = generator;
     this.frontmatter = frontmatter;
+  }
+
+  @org.springframework.beans.factory.annotation.Autowired
+  public CodeGenService(
+    CodeGenerator generator,
+    Frontmatter frontmatter,
+    QueryCodeGenerator queryGenerator,
+    QueryResultStore queryResults
+  ) {
+    this(generator, frontmatter);
+    this.queryGenerator = queryGenerator;
+    this.queryResults = queryResults;
   }
 
   public Inputs read(String markdown) {
@@ -59,11 +76,30 @@ public class CodeGenService {
       UUID.randomUUID().toString(),
       request.service_name() + ".zip",
       files,
-      generator.status()
+      generator.status(),
+      List.of(),
+      null
     );
     previews.put(result.id(), result);
     while (previews.size() > 100) previews.remove(previews.keySet().iterator().next());
     return result;
+  }
+
+  public synchronized Preview previewFromQuery(String queryId, GenerationRequest request) {
+    var result = queryResults.get(queryId);
+    var generated = queryGenerator.generate(request, result);
+    buildZip(generated.files());
+    var preview = new Preview(
+      UUID.randomUUID().toString(),
+      request.service_name() + ".zip",
+      generated.files(),
+      "DB 조회 결과 기반 코드 생성 완료",
+      generated.warnings(),
+      queryId
+    );
+    previews.put(preview.id(), preview);
+    while (previews.size() > 100) previews.remove(previews.keySet().iterator().next());
+    return preview;
   }
 
   public synchronized Preview get(String id) {

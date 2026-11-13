@@ -83,6 +83,29 @@ public class LocalDocumentService {
     return snapshot(path, read(path));
   }
 
+  private Path registeredRecursive(String value) throws IOException {
+    Path real = Path.of(value).toRealPath();
+    for (var folder : repository.folders()) {
+      try {
+        if (
+          real.startsWith(Path.of(folder.path()).toRealPath()) &&
+          markdown(real) &&
+          Files.isRegularFile(real)
+        ) return real;
+      } catch (IOException ignored) {}
+    }
+    throw new IllegalArgumentException("등록 폴더 안의 MD 파일만 열 수 있습니다.");
+  }
+
+  public LocalFile openRecursive(String value) throws IOException {
+    Path path = registeredRecursive(value);
+    return snapshot(path, read(path));
+  }
+
+  public LocalFile saveRecursive(String value, String revision, String content) throws IOException {
+    return save(value, revision, content, true);
+  }
+
   private byte[] read(Path path) throws IOException {
     if (Files.size(path) > MAX_BYTES) throw new IllegalArgumentException(
       "2MB 이하 파일만 지원합니다."
@@ -117,9 +140,17 @@ public class LocalDocumentService {
     }
   }
 
-  public synchronized LocalFile save(String value, String revision, String content)
-    throws IOException {
-    Path path = registered(value);
+  public LocalFile save(String value, String revision, String content) throws IOException {
+    return save(value, revision, content, false);
+  }
+
+  private synchronized LocalFile save(
+    String value,
+    String revision,
+    String content,
+    boolean recursive
+  ) throws IOException {
+    Path path = recursive ? registeredRecursive(value) : registered(value);
     byte[] original = read(path);
     if (!hash(original).equals(revision)) throw new Conflict(
       "원본 파일이 다른 프로그램에서 변경되었습니다. 파일을 다시 열어 확인한 뒤 저장하세요."

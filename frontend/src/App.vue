@@ -8,6 +8,14 @@ const SchedulePage = defineAsyncComponent(() => import('./features/schedule/Sche
 const MindMapPage = defineAsyncComponent(() => import('./features/mindmap/MindMapPage.vue'))
 const UiTestPage = defineAsyncComponent(() => import('./features/automation/UiTestPage.vue'))
 const CodeGenPage = defineAsyncComponent(() => import('./features/codegen/CodeGenPage.vue'))
+const DatabaseQueryPage = defineAsyncComponent(
+  () => import('./features/database/DatabaseQueryPage.vue'),
+)
+const queryId = ref<string | null>(null)
+function generateFromQuery(id: string) {
+  queryId.value = id
+  tab.value = 'codegen'
+}
 const q = useQuasar()
 const tab = ref('documents')
 const settings = reactive({ app_theme: 'light', mermaid_theme: 'default' })
@@ -18,6 +26,7 @@ const tabs = [
   ['schedule', '일정', 'calendar_month'],
   ['ui_test', 'UI_TEST', 'science'],
   ['codegen', 'code_gen', 'code'],
+  ['database', 'DB조회', 'storage'],
   ['mindmap', '마인드맵', 'account_tree'],
 ]
 async function theme(key: 'app_theme' | 'mermaid_theme', value: string) {
@@ -88,7 +97,15 @@ onMounted(() =>
           <q-tab-panel name="ui_test" class="q-pa-none"
             ><UiTestPage :dark="settings.app_theme === 'dark'"
           /></q-tab-panel>
-          <q-tab-panel name="codegen" class="q-pa-none"><CodeGenPage /></q-tab-panel>
+          <q-tab-panel name="codegen" class="q-pa-none"
+            ><CodeGenPage :query-id="queryId" @clear-query="queryId = null"
+          /></q-tab-panel>
+          <q-tab-panel name="database" class="q-pa-none"
+            ><DatabaseQueryPage
+              :dark="settings.app_theme === 'dark'"
+              @generate="generateFromQuery"
+              @invalidate="queryId === $event && (queryId = null)"
+          /></q-tab-panel>
           <q-tab-panel name="mindmap" class="q-pa-none"><MindMapPage /></q-tab-panel>
         </q-tab-panels></main
     ></q-page-container>

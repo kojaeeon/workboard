@@ -17,7 +17,11 @@ export interface GridColumn {
   width: number
   type: string
 }
-const props = defineProps<{ columns: GridColumn[]; rows: Record<string, unknown>[] }>()
+const props = defineProps<{
+  columns: GridColumn[]
+  rows: Record<string, unknown>[]
+  fileName?: string
+}>()
 const emit = defineEmits<{ detail: [row: Record<string, unknown>] }>()
 const q = useQuasar(),
   search = ref(''),
@@ -41,7 +45,7 @@ function reset() {
 }
 function csv() {
   grid.value?.exportDataAsCsv({
-    fileName: 'wiql_result.csv',
+    fileName: props.fileName || 'wiql_result.csv',
     processCellCallback: (p) => {
       const text = p.value == null ? '' : String(p.value)
       return /^\s*[=+@-]/.test(text) ? "'" + text : text

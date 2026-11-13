@@ -1,6 +1,6 @@
 # KJA_BOARD · Spring Boot 포팅
 
-Python/NiceGUI 대시보드의 **문서, Work, 일정, ADO WIQL, UI_TEST, code_gen, 마인드맵**을 Java/Spring Boot + Vue/TypeScript + SQLite/JdbcClient로 포팅했습니다. ADO는 Work 내부에 있어 상단 탭은 6개입니다. 배포/백업은 제외했습니다.
+Python/NiceGUI 대시보드의 **문서, Work, 일정, ADO WIQL, UI_TEST, code_gen, 마인드맵**을 포팅하고 **DB조회**를 추가했습니다. Java/Spring Boot + Vue/TypeScript + SQLite/JdbcClient를 사용합니다. ADO는 Work 내부에 있어 상단 탭은 7개입니다. 배포/백업은 제외했습니다.
 
 원본 기준: [kojaeeon/dashboard, 804140b83b6a919803fdcd376f70eec4d713899b](https://github.com/kojaeeon/dashboard/tree/804140b83b6a919803fdcd376f70eec4d713899b).
 
@@ -39,7 +39,8 @@ Windows에서는 실행 중인 대시보드와 개발 서버를 종료한 뒤 �
 | 일정 | 월·주·일 보기, 등록·수정·삭제, 드래그·크기 변경, 분류별 색상, 기간 목록, 서울 시간대, 종일 종료일의 비포함 경계 |
 | ADO | Flat WIQL, 응답 메타데이터 기반 동적 컬럼, 200건 제한, ID 순서 유지, 정렬·필터·검색·선택·CSV·상세 보기 |
 | UI_TEST | MD 프론트매터 검증, 브라우저 MD 설정·부분 병합, 별도 JVM 실행·중지, 단계별 결과, 실패 시 후속 단계 건너뛰기, PNG·trace·JSON·로그 다운로드 |
-| code_gen | 저장 문서·등록 폴더 하위 MD의 workItem 자동 입력, 샘플 Controller·Service·VO·Mapper XML 미리보기, 파일 선택·복사, 미리보기와 동일한 UTF-8 ZIP 다운로드 |
+| code_gen | MD의 workItem 자동 입력, 기존 샘플 또는 DB 실제 컬럼 기반 Controller·Service·VO·Mapper Java/XML 생성, 파일 선택·복사, 미리보기와 동일한 UTF-8 ZIP 다운로드 |
+| DB조회 | 접속정보·SQL 프론트매터 MD 읽기·편집·저장, SQLite·DB2 LUW 실제 조회, 명명 매개변수·행/시간 제한, 동적 그리드·CSV, 결과 기반 실제 코드 생성 연결 |
 | 마인드맵 | 원본 Mind Elixir 편집기, 노드·관계·요약·유형·스타일, 검색·강조, 복사/붙여넣기, 실행 취소/다시 실행, 방향·확대·축소·전체화면, SQLite 저장·충돌 검사, DOT·Mermaid·JSON·PNG 입출력 |
 
 화면 외형을 맞추기 위해 NiceGUI와 동일한 Quasar를 사용합니다. 원본 마인드맵 편집기와 CSS, 캘린더 배포 자산, Mermaid 전체화면 동작을 재사용했습니다. 코드 변경 지점과 검증 범위는 [포팅 기록](docs/porting.md)에 있습니다.
@@ -74,9 +75,11 @@ Windows에서는 실행 중인 대시보드와 개발 서버를 종료한 뒤 �
 
 ## 코드 생성
 
-원본과 같은 **샘플 미리보기 기능**이며 DB 메타데이터 조회·실제 SQL 생성은 포함하지 않습니다. `workItem.table`, `service`, `serviceNm`, `package`를 MD에서 읽거나 직접 입력합니다. 원본 Jinja2 템플릿의 출력 내용을 Java FreeMarker로 유지했습니다. 입력이 바뀌면 이전 다운로드를 비활성화하고, ZIP은 서버가 보관한 미리보기의 파일 내용 그대로 생성합니다.
+두 가지 모드를 제공합니다. **샘플 모드**는 원본 Jinja2 샘플 출력을 Java FreeMarker로 유지합니다. **DB 결과 모드**는 DB조회에서 전달한 실제 컬럼·자료형·PK·생성 컬럼 정보로 VO, Controller, Service, Mapper Java 인터페이스·XML을 생성합니다. 입력이 바뀌면 이전 다운로드를 비활성화하고, ZIP은 서버가 보관한 미리보기의 파일 내용 그대로 생성합니다.
 
-템플릿은 `backend/src/main/resources/codegen`에서 수정합니다. 실제 생성기를 연결할 때는 `CodeGenerator` 구현을 교체하세요. 미리보기는 메모리에 최대 100개를 보관하며 앱을 재시작하면 다시 생성해야 합니다.
+`DB조회` → MD 선택 또는 불러오기 → 접속정보·SQL·매개변수 수정 → `SQL 실행` → `code_gen으로 보내기` → 생성 정보 확인 → `코드 미리보기` 순서입니다. [SQLite 예시](examples/db-query-sqlite.md), [DB2 LUW 예시](examples/db-query-db2.md)를 포함했습니다. 상세 형식과 확장 방법은 [DB조회 안내](docs/database-query.md)를 참고하세요.
+
+샘플 템플릿은 `backend/src/main/resources/codegen`, DB 결과 템플릿은 그 아래 `database`에서 수정합니다. 다른 샘플 생성기는 `CodeGenerator` 구현으로 교체할 수 있습니다. DB 접속은 `DatabaseConnector`, 식별자·DB별 자료형 규칙은 `DatabaseDialect`로 확장합니다. 미리보기는 메모리에 최대 100개를 보관하며 앱을 재시작하면 다시 생성해야 합니다.
 
 ## 검증
 
