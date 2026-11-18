@@ -1,0 +1,22 @@
+[data-workboard-page='database'] .profile-upload {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #b89a6060;
+  padding: 10px 16px;
+  border-radius: 8px;
+  color: var(--q-primary);
+  cursor: pointer;
+}
+[data-workboard-page='database'] .profile-upload input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  cursor: pointer;
+}
+[data-workboard-page='database'] .profile-upload:has(input:disabled) {
+  pointer-events: none;
+  opacity: 0.5;
+}

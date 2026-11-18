@@ -1,0 +1,82 @@
+<section class="page" th:fragment="content">
+    <h1 class="page-title">일정</h1>
+    <p class="muted page-subtitle">
+      날짜를 눌러 등록하고, 일정을 눌러 수정하세요. 시간은 한국 시간 기준입니다.
+    </p>
+    <div class="row items-center row-gap">
+      <q-btn color="primary" label="일정 추가" icon="add" @click="editor()" ></q-btn><q-btn
+        flat
+        label="새로고침"
+        icon="refresh"
+        @click="act(refresh)"
+      ></q-btn>
+      <div v-for="c in categories" :key="c.value" class="row items-center" style="gap: 4px">
+        <q-icon name="circle" :style="{ color: c.color }" size="12px" ></q-icon><span>{{ c.label }}</span>
+      </div>
+    </div>
+    <q-card
+      ><calendar
+        ref="calendar"
+        class="schedule-calendar"
+        :events="events"
+        resource-path="/vendor/calendar"
+        @date_click="editor(undefined, $event.start, $event.allDay)"
+        @event_click="open($event.id)"
+        @event_change="move"
+        @period_change="changed"
+    ></calendar></q-card>
+    <q-expansion-item label="현재 기간의 일정 목록" icon="event_note"
+      ><div v-if="!events.length" class="muted q-pa-md">표시할 일정이 없습니다.</div>
+      <q-btn
+        v-for="event in events"
+        :key="event.id"
+        flat
+        no-caps
+        class="full-width"
+        align="left"
+        :label="`${event.start.replace('T', ' ').slice(0, event.allDay ? 10 : 16)} · ${event.title}`"
+        @click="open(event.id)"
+    ></q-btn></q-expansion-item>
+    <q-dialog v-model="dialog"
+      ><q-card style="width: 576px; max-width: 100%" class="column column-gap"
+        ><div class="text-h6">{{ form.id ? '일정 수정' : '새 일정' }}</div>
+        <q-input v-model="form.title" label="일정 제목" ></q-input><q-select
+          v-model="form.category"
+          :options="categories"
+          emit-value
+          map-options
+          label="분류" ></q-select><q-checkbox v-model="form.allDay" label="종일" ></q-checkbox>
+        <div class="row row-gap">
+          <q-input v-model="form.startDate" label="시작 날짜" type="date" class="col" ></q-input><q-input
+            v-model="form.endDate"
+            label="종료 날짜"
+            type="date"
+            class="col"
+          ></q-input>
+        </div>
+        <div v-if="!form.allDay" class="row row-gap">
+          <q-input v-model="form.startTime" label="시작 시간" type="time" class="col" ></q-input><q-input
+            v-model="form.endTime"
+            label="종료 시간"
+            type="time"
+            class="col"
+          ></q-input>
+        </div>
+        <div class="muted">종일 일정의 종료 날짜는 마지막 일정일입니다.</div>
+        <q-input v-model="form.notes" label="일정 메모" type="textarea" ></q-input>
+        <div class="row justify-end row-gap">
+          <q-btn
+            v-if="form.id"
+            flat
+            label="삭제"
+            color="negative"
+            icon="delete"
+            @click="remove"
+          ></q-btn><q-btn flat label="취소" @click="dialog = false" ></q-btn><q-btn
+            color="primary"
+            label="저장"
+            :loading="saving"
+            @click="save"
+          ></q-btn></div></q-card
+    ></q-dialog>
+  </section>

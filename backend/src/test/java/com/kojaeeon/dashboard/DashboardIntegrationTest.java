@@ -97,6 +97,47 @@ class DashboardIntegrationTest {
   }
 
   @Test
+  void workspaceRendersEachPageAndItsNavigation() throws Exception {
+    Map<String, String> pages = Map.of(
+      "/",
+      "documents",
+      "/documents",
+      "documents",
+      "/work",
+      "work",
+      "/schedule",
+      "schedule",
+      "/ui-test",
+      "ui-test",
+      "/codegen",
+      "codegen",
+      "/database",
+      "database",
+      "/mindmap",
+      "mindmap"
+    );
+    for (var route : pages.entrySet()) {
+      String html = mvc
+        .perform(get(route.getKey()))
+        .andExpect(status().isOk())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+        .andReturn()
+        .getResponse()
+        .getContentAsString(StandardCharsets.UTF_8);
+      var document = org.jsoup.Jsoup.parse(html);
+      assertThat(
+        document.select("#workspace-pages [data-workboard-page]").attr("data-workboard-page")
+      ).isEqualTo(route.getValue());
+      assertThat(document.select("nav [aria-current=page]").attr("data-page")).isEqualTo(
+        route.getValue()
+      );
+      assertThat(document.select("#workspace-pages h1.page-title")).hasSize(1);
+      assertThat(html).contains("/assets/workboard.js", "/assets/workboard.css");
+    }
+    mvc.perform(get("/missing-menu")).andExpect(status().isNotFound());
+  }
+
+  @Test
   void workCrudAndValidation() throws Exception {
     long id = response(
       post("/api/work")

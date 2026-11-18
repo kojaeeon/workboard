@@ -1,6 +1,6 @@
 # KJA_BOARD · Spring Boot 포팅
 
-Python/NiceGUI 대시보드의 **문서, Work, 일정, ADO WIQL, UI_TEST, code_gen, 마인드맵**을 포팅하고 **DB조회**를 추가했습니다. Java/Spring Boot + Vue/TypeScript + SQLite/JdbcClient를 사용합니다. ADO는 Work 내부에 있어 상단 탭은 7개입니다. 배포/백업은 제외했습니다.
+Python/NiceGUI 대시보드의 **문서, Work, 일정, ADO WIQL, UI_TEST, code_gen, 마인드맵**을 포팅하고 **DB조회**를 추가했습니다. Java/Spring Boot + Thymeleaf + SQLite/JdbcClient를 사용합니다. ADO는 Work 내부에 있어 상단 탭은 7개입니다. 배포/백업은 제외했습니다.
 
 원본 기준: [kojaeeon/dashboard, 804140b83b6a919803fdcd376f70eec4d713899b](https://github.com/kojaeeon/dashboard/tree/804140b83b6a919803fdcd376f70eec4d713899b).
 
@@ -20,15 +20,15 @@ JDK 21 이상, Node.js 22.12 이상이 필요합니다. Maven은 동봉한 Wrapp
 
 ### 개발
 
-서로 다른 터미널에서 실행합니다.
+페이지와 메뉴는 Thymeleaf가 렌더링합니다. 브라우저에서 [http://127.0.0.1:8080](http://127.0.0.1:8080)에 접속하거나 `/work`, `/schedule`, `/database` 같은 메뉴 URL을 직접 열 수 있습니다.
 
 ```powershell
+npm.cmd --prefix frontend ci
+npm.cmd --prefix frontend run build
 .\backend\mvnw.cmd -f backend/pom.xml spring-boot:run
-npm.cmd --prefix frontend run dev
 ```
 
-개발 화면은 [http://127.0.0.1:5173](http://127.0.0.1:5173)이며 `/api`를 서버의 8080 포트로 전달합니다.
-Windows에서는 실행 중인 대시보드와 개발 서버를 종료한 뒤 전체 빌드를 실행하세요. 사용 중인 JAR 또는 Vite의 esbuild 파일은 교체할 수 없습니다. 전체 빌드는 이전 서버 빌드 산출물을 정리하므로 오래된 프런트엔드 자산이 JAR에 누적되지 않습니다.
+페이지 HTML은 `backend/src/main/resources/templates`에서, API와 연동하는 화면 로직은 `frontend/src/features`에서 수정합니다. 브라우저 자산을 바꿨으면 npm 빌드를 다시 실행하세요. 패키징할 때는 `build.ps1`로 화면 자산 생성과 Maven 검증을 함께 실행합니다.
 
 ## 기능
 
@@ -43,7 +43,7 @@ Windows에서는 실행 중인 대시보드와 개발 서버를 종료한 뒤 �
 | DB조회 | 접속정보·SQL 프론트매터 MD 읽기·편집·저장, SQLite·DB2 LUW 실제 조회, 명명 매개변수·행/시간 제한, 동적 그리드·CSV, 결과 기반 실제 코드 생성 연결 |
 | 마인드맵 | 원본 Mind Elixir 편집기, 노드·관계·요약·유형·스타일, 검색·강조, 복사/붙여넣기, 실행 취소/다시 실행, 방향·확대·축소·전체화면, SQLite 저장·충돌 검사, DOT·Mermaid·JSON·PNG 입출력 |
 
-화면 외형을 맞추기 위해 NiceGUI와 동일한 Quasar를 사용합니다. 원본 마인드맵 편집기와 CSS, 캘린더 배포 자산, Mermaid 전체화면 동작을 재사용했습니다. 코드 변경 지점과 검증 범위는 [포팅 기록](docs/porting.md)에 있습니다.
+Thymeleaf가 공통 레이아웃과 메뉴별 HTML을 제공합니다. 기존 입력 폼·편집기·그리드는 Vue/Quasar 위젯으로 연결하며, 메뉴를 이동했다 돌아오면 화면의 입력값을 계속 사용할 수 있습니다. 원본 마인드맵 편집기와 CSS, 캘린더 배포 자산, Mermaid 전체화면 동작을 재사용했습니다. 코드 변경 지점과 검증 범위는 [포팅 기록](docs/porting.md)에 있습니다.
 
 ## 기존 데이터
 

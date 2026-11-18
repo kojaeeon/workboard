@@ -1,0 +1,16 @@
+[data-workboard-page='work'] .work-board {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+[data-workboard-page='work'] .work-board > .q-card {
+  width: 33.333%;
+}
+@media (max-width: 1023px) {
+  [data-workboard-page='work'] .work-board {
+    flex-wrap: wrap;
+  }
+  [data-workboard-page='work'] .work-board > .q-card {
+    width: 100%;
+  }
+}

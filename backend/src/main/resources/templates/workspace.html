@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="|${page.label} · KJA_BOARD|">KJA_BOARD</title>
+    <link rel="stylesheet" th:href="@{/assets/workboard.css}">
+    <script type="module" th:src="@{/assets/workboard.js}"></script>
+  </head>
+  <body>
+    <header class="studio-header row">
+      <a class="brand-name" th:href="@{/}">KJA_BOARD</a>
+      <div class="appearance-controls row items-center">
+        <label>
+          화면 테마
+          <select name="app_theme" disabled>
+            <option value="light">라이트</option>
+            <option value="dark">다크</option>
+          </select>
+        </label>
+        <label>
+          Mermaid 테마
+          <select name="mermaid_theme" disabled>
+            <option value="default">기본</option>
+            <option value="dark">다크</option>
+            <option value="forest">Forest</option>
+            <option value="neutral">Neutral</option>
+            <option value="base">Base</option>
+          </select>
+        </label>
+      </div>
+    </header>
+    <main class="workspace">
+      <nav class="studio-navigation workspace-nav" aria-label="메뉴">
+        <a th:each="item : ${pages}" th:href="@{${item.path()}}"
+           th:attr="data-page=${item.id},aria-current=${item.id == page.id ? 'page' : null}">
+          <span class="material-icons" aria-hidden="true" th:text="${item.icon}"></span>
+          <span data-page-label th:text="${item.label}"></span>
+        </a>
+      </nav>
+      <p id="workspace-message" role="status" hidden></p>
+      <noscript>편집기와 조회 기능을 사용하려면 JavaScript를 활성화하세요.</noscript>
+      <div id="workspace-pages">
+        <div th:attr="data-workboard-page=${page.id}" hidden>
+          <th:block th:replace="~{|${'pages/' + page.id}| :: content}"></th:block>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

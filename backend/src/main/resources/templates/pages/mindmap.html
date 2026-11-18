@@ -1,0 +1,134 @@
+<section class="page column" th:fragment="content">
+    <h1 class="page-title">마인드맵</h1>
+    <div class="row items-center" style="gap: 12px">
+      <q-icon name="account_tree" size="24px" ></q-icon><q-input
+        v-model="title"
+        label="맵 제목"
+        outlined
+        dense
+        style="width: 288px"
+      ></q-input><q-btn color="primary" label="저장" icon="save" :loading="busy" @click="save" ></q-btn><q-btn
+        color="primary"
+        outline
+        label="가져오기"
+        icon="upload"
+        @click="showImport"
+      ></q-btn><q-btn color="primary" outline label="내보내기" icon="download" @click="showExport" ></q-btn><span
+        class="text-caption"
+        style="opacity: 0.6"
+        >{{ status }}</span
+      >
+    </div>
+    <div class="row no-wrap items-start full-width" style="gap: 12px">
+      <aside class="column" style="width: 208px; flex-shrink: 0; gap: 8px">
+        <span class="text-caption" style="letter-spacing: 0.1em; opacity: 0.6"
+          >MIND MAP LIBRARY</span
+        ><q-btn
+          color="primary"
+          outline
+          label="새 마인드맵"
+          icon="add"
+          @click="replace(newGraph(), '새 마인드맵')"
+        ></q-btn><q-btn color="primary" flat label="서비스 예시" icon="schema" @click="example" ></q-btn>
+        <div v-for="item in library" :key="item.id" class="row no-wrap items-center">
+          <q-btn
+            flat
+            no-caps
+            align="left"
+            :label="item.title"
+            class="grow min-w-0"
+            @click="open(item)"
+          ></q-btn><q-btn
+            flat
+            round
+            dense
+            icon="delete_outline"
+            aria-label="저장된 맵 삭제"
+            @click="remove(item)"
+          ></q-btn>
+        </div>
+        <span v-if="!library.length" class="text-caption q-pa-sm" style="opacity: 0.5"
+          >저장한 맵이 없습니다.</span
+        >
+      </aside>
+      <mind-map-editor
+        v-if="graph"
+        ref="editor"
+        :graph="graph"
+        :types="types"
+        resource-path="/vendor/mindmap"
+        class="grow min-w-0"
+        @save_request="save"
+        @type_save="saveType"
+        @load_error="Notify.create({ type: 'negative', message: '마인드맵 로딩 실패: ' + $event })"
+      ></mind-map-editor>
+    </div>
+    <q-dialog v-model="importing"
+      ><q-card style="width: 850px; max-width: 100%" class="column column-gap"
+        ><div class="text-h6">맵 가져오기</div>
+        <q-select
+          v-model="inputFormat"
+          :options="[
+            { value: 'dot', label: 'DOT' },
+            { value: 'mermaid', label: 'Mermaid mindmap / flowchart' },
+            { value: 'json', label: 'KJA JSON' },
+          ]"
+          emit-value
+          map-options
+          label="입력 형식" ></q-select><q-input
+          v-model="source"
+          label="소스 코드"
+          type="textarea"
+          outlined
+          :input-style="{ minHeight: '240px' }" ></q-input><input
+          type="file"
+          accept=".dot,.gv,.mmd,.md,.txt,.json"
+          aria-label="마인드맵 파일 불러오기"
+          @change="upload" /><span class="text-caption" style="opacity: 0.6"
+          >순환·다중 부모는 계층과 추가 관계로 변환합니다. 스크립트·클릭 동작은 실행하지
+          않습니다.</span
+        >
+        <div class="row row-gap">
+          <q-btn flat label="취소" @click="importing = false" ></q-btn><q-btn
+            color="primary"
+            label="가져오기 적용"
+            :loading="working"
+            @click="applyImport"
+          ></q-btn></div></q-card
+    ></q-dialog>
+    <q-dialog v-model="exporting"
+      ><q-card style="width: 850px; max-width: 100%" class="column column-gap"
+        ><div class="text-h6">마인드맵 내보내기</div>
+        <q-select
+          v-model="outputFormat"
+          :options="formats"
+          emit-value
+          map-options
+          label="출력 형식" ></q-select><q-input
+          v-if="outputFormat !== 'png'"
+          v-model="output"
+          readonly
+          outlined
+          label="출력 코드"
+          type="textarea"
+          :input-style="{ minHeight: '290px' }" ></q-input><span class="text-caption" style="opacity: 0.6">{{
+          outputFormat === 'png'
+            ? '현재 펼침 상태의 전체 맵을 PNG로 저장합니다. 화면 밖 노드·연결선도 포함합니다.'
+            : 'KJA 메타데이터 주석으로 유형·스타일·관계를 보존합니다. Mermaid mindmap의 추가 관계는 다른 뷰어에 표시되지 않습니다.'
+        }}</span>
+        <div class="row row-gap">
+          <q-btn
+            v-if="outputFormat !== 'png'"
+            color="primary"
+            label="코드 복사"
+            icon="content_copy"
+            @click="copy"
+          ></q-btn><q-btn
+            color="primary"
+            label="다운로드"
+            icon="download"
+            :loading="working"
+            @click="exportFile"
+          ></q-btn><q-btn flat label="닫기" @click="exporting = false" ></q-btn></div></q-card
+    ></q-dialog>
+  </section>

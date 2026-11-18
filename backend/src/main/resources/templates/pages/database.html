@@ -1,0 +1,126 @@
+<section class="page" th:fragment="content">
+    <h1 class="page-title">DB조회</h1>
+    <p class="muted page-subtitle">
+      접속정보와 SQL을 MD로 관리하고, 실제 조회 결과로 코드를 생성하세요.
+    </p>
+    <q-card class="column column-gap full-width"
+      ><div class="row items-center full-width row-gap">
+        <q-select
+          :model-value="selected"
+          @update:model-value="load"
+          :options="sources.map((s) => ({ label: s.label, value: s.key }))"
+          label="DB 조회 프론트매터 MD"
+          emit-value
+          map-options
+          outlined
+          class="grow min-w-0"
+          :disable="!!busy"
+        ></q-select><q-btn
+          flat
+          round
+          icon="refresh"
+          aria-label="DB 조회 MD 목록 새로고침"
+          :disable="!!busy"
+          @click="act(refresh)"
+        ></q-btn><label class="profile-upload"
+          ><q-icon name="upload" ></q-icon> MD 불러오기<input
+            type="file"
+            accept=".md,.markdown"
+            aria-label="DB 조회 MD 불러오기"
+            :disabled="!!busy"
+            @change="upload" /></label
+        ><q-btn
+          color="primary"
+          label="MD 저장"
+          icon="save"
+          :loading="busy === 'save'"
+          :disable="!!busy"
+          @click="save"
+        ></q-btn><q-btn
+          flat
+          label="MD 다운로드"
+          icon="download"
+          :disable="!!busy"
+          @click="download(markdown, 'db-query.md', 'text/markdown;charset=utf-8')"
+        ></q-btn>
+      </div>
+      <div class="text-caption muted" style="overflow-wrap: anywhere">
+        저장 위치: {{ location }}
+      </div>
+      <div class="text-body2 muted">
+        connection · query.sql · query.parameters · codegen · workItem을 작성하세요. 상대 SQLite
+        경로는 대시보드 실행 폴더 기준입니다.
+      </div>
+      <markdown-editor
+        v-model="markdown"
+        :dark="dark"
+        height="560px"
+        :disabled="!!busy"
+        aria-label="DB 조회 MD 편집기"
+      ></markdown-editor>
+      <div class="row items-center full-width row-gap">
+        <q-btn
+          flat
+          label="설정 확인"
+          icon="checklist"
+          :loading="busy === 'validate'"
+          :disable="!!busy"
+          @click="execute('validate')"
+        ></q-btn><q-btn
+          outline
+          color="primary"
+          label="접속 확인"
+          icon="cable"
+          :loading="busy === 'connect'"
+          :disable="!!busy"
+          @click="execute('connect')"
+        ></q-btn><q-btn
+          color="primary"
+          label="SQL 실행"
+          icon="play_arrow"
+          :loading="busy === 'query'"
+          :disable="!!busy"
+          @click="execute('query')"
+        ></q-btn><q-space ></q-space><q-btn
+          color="primary"
+          label="code_gen으로 보내기"
+          icon="code"
+          :disable="!result || result.truncated || !!busy"
+          @click="result && emit('generate', result.id)"
+        ></q-btn>
+      </div>
+      <div role="status" style="white-space: pre-wrap">{{ message }}</div></q-card
+    >
+    <q-card v-if="result" class="column column-gap full-width"
+      ><div class="row items-center row-gap">
+        <div class="text-h6">조회 결과 · {{ result.title }}</div>
+        <q-badge outline color="primary">{{
+          result.codegen.mode === 'metadata' ? '컬럼 메타데이터' : 'SELECT 컬럼 구조'
+        }}</q-badge>
+      </div>
+      <q-banner v-if="result.truncated" class="bg-warning text-black full-width"
+        >행 수 또는 결과 크기 제한으로 일부 결과가 잘렸습니다. 이 결과로 코드를 생성할 수
+        없습니다.</q-banner
+      ><common-grid
+        :columns="columns"
+        :rows="result.rows"
+        file-name="db_query.csv"
+        @detail="detail = $event"
+      ></common-grid>
+      <div class="text-caption muted">
+        조회 결과는 최대 20개·30분 동안 메모리에 보관합니다. 접속 비밀번호는 결과에 저장하지
+        않습니다.
+      </div></q-card
+    >
+    <q-dialog :model-value="!!detail" @update:model-value="detail = null"
+      ><q-card class="column column-gap" style="width: 768px; max-width: 100%"
+        ><div class="text-h6">조회 행 상세</div>
+        <div v-for="column in columns" :key="column.key">
+          <strong>{{ column.label }}</strong>
+          <div style="white-space: pre-wrap; overflow-wrap: anywhere">
+            {{ detail?.[column.key] ?? '' }}
+          </div>
+        </div>
+        <q-btn label="닫기" color="primary" @click="detail = null" ></q-btn></q-card
+    ></q-dialog>
+  </section>

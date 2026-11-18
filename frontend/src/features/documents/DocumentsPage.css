@@ -1,0 +1,17 @@
+[data-workboard-page='documents'] .documents-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+[data-workboard-page='documents'] .library {
+  width: 256px;
+  flex-shrink: 0;
+}
+@media (max-width: 1023px) {
+  [data-workboard-page='documents'] .documents-layout {
+    flex-wrap: wrap;
+  }
+  [data-workboard-page='documents'] .library {
+    width: 100%;
+  }
+}

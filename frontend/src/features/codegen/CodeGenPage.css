@@ -1,0 +1,30 @@
+[data-workboard-page='codegen'] .query-source,
+[data-workboard-page='codegen'] .generation-warnings {
+  border: 1px solid #b89a6040;
+  border-radius: 12px;
+  background: #b89a6012;
+}
+[data-workboard-page='codegen'] .codegen-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+[data-workboard-page='codegen'] .codegen-input {
+  width: 40%;
+  min-width: 0;
+  gap: 20px;
+}
+[data-workboard-page='codegen'] .codegen-output {
+  width: 60%;
+  min-width: 0;
+  gap: 20px;
+}
+@media (max-width: 1023px) {
+  [data-workboard-page='codegen'] .codegen-layout {
+    flex-wrap: wrap;
+  }
+  [data-workboard-page='codegen'] .codegen-input,
+  [data-workboard-page='codegen'] .codegen-output {
+    width: 100%;
+  }
+}
