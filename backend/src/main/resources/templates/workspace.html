@@ -4,12 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title th:text="|${page.label} · KJA_BOARD|">KJA_BOARD</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
     <link rel="stylesheet" th:href="@{/assets/workboard.css}">
     <script type="module" th:src="@{/assets/workboard.js}"></script>
   </head>
   <body>
     <header class="studio-header row">
-      <a class="brand-name" th:href="@{/}">KJA_BOARD</a>
+      <a class="brand-name" th:href="@{/}" aria-label="KJA_BOARD 홈">
+        <span class="brand-wordmark">KJA_BOARD</span>
+        <span class="brand-caption">PERSONAL WORKSPACE</span>
+      </a>
       <div class="appearance-controls row items-center">
         <label>
           화면 테마

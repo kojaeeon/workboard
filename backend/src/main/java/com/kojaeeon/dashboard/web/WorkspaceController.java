@@ -20,9 +20,9 @@ class WorkspaceController {
     new Page("documents", "MD 보기", "description"),
     new Page("work", "Work", "task_alt"),
     new Page("schedule", "일정", "calendar_month"),
-    new Page("ui-test", "UI_TEST", "science"),
-    new Page("codegen", "code_gen", "code"),
-    new Page("database", "DB조회", "storage"),
+    new Page("ui-test", "UI 테스트", "science"),
+    new Page("codegen", "코드 생성", "code"),
+    new Page("database", "DB 조회", "storage"),
     new Page("mindmap", "마인드맵", "account_tree")
   );
 
