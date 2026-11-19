@@ -6,9 +6,9 @@ export interface Block {
 export function blocks(content: string): Block[] {
   content = content.replace(/^\uFEFF/, '')
   const result: Block[] = []
-  const fm = content.match(/^---[ \t]*\r?\n([\s\S]*?)\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/)
+  const fm = content.match(/^---[ \t]*\r?\n((?:[^\n]*\n)*?)(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/)
   if (fm) {
-    result.push({ kind: 'frontmatter', source: fm[1], language: 'yaml' })
+    result.push({ kind: 'frontmatter', source: fm[1].replace(/\r?\n$/, ''), language: 'yaml' })
     content = content.slice(fm[0].length)
   }
   const lines = content.match(/[^\n]*\n|[^\n]+$/g) || []

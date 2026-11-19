@@ -1,21 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import MarkdownIt from 'markdown-it'
-import DOMPurify from 'dompurify'
-import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import MermaidDiagram from './MermaidDiagram.vue'
 import { blocks } from './markdown'
+import { renderMarkdown as html, renderCode as code } from './markdownRender'
 import { error } from '../../shared/api'
 const props = defineProps<{ content: string; theme: string }>()
-const md = new MarkdownIt({ html: true, linkify: true, breaks: false })
 const segments = computed(() => blocks(props.content))
-const html = (text: string) => DOMPurify.sanitize(md.render(text))
-function code(source: string, language: string | undefined) {
-  return language && hljs.getLanguage(language)
-    ? hljs.highlight(source, { language }).value
-    : md.utils.escapeHtml(source)
-}
 async function copy(source: string) {
   try {
     await navigator.clipboard.writeText(source)

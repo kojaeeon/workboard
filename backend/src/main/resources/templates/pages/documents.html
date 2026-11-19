@@ -13,7 +13,7 @@
             class="full-width"
             align="left"
             :label="item.title"
-            @click="open(item)"
+            @click="openStored(item.id)"
           ></q-btn>
         </div>
         <q-separator ></q-separator>
@@ -67,6 +67,7 @@
           accept=".md,.markdown,text/markdown"
           :max-file-size="2097152"
           style="width: 100%; height: 115px"
+          @added="trackUpload"
           @uploaded="uploaded"
           @rejected="error(new Error('2MB 이하 파일을 선택하세요.'))"
           @failed="error(new Error('UTF-8 형식의 MD 파일이 필요합니다.'))"
@@ -76,11 +77,22 @@
         <div class="row items-center row-gap">
           <q-input v-model="document.title" label="문서 제목" class="grow" ></q-input><q-btn
             color="primary"
-            label="저장"
             icon="save"
+            round
+            aria-label="저장"
             :loading="busy"
             @click="save"
-          ></q-btn><q-btn flat icon="delete" color="negative" aria-label="문서 삭제" @click="remove" ></q-btn>
+          ><q-tooltip>저장</q-tooltip></q-btn><q-btn
+            outline
+            color="primary"
+            icon="picture_as_pdf"
+            round
+            aria-label="PDF 출력"
+            :loading="pdfBusy"
+            :disable="!document.content.trim()"
+            @click="exportPdf"
+          ><q-tooltip>PDF 출력</q-tooltip></q-btn><q-btn flat round icon="delete" color="negative" aria-label="문서 삭제"
+            :disable="document.id === null || busy" @click="remove" ><q-tooltip>문서 삭제</q-tooltip></q-btn>
         </div>
         <div class="text-caption muted" style="overflow-wrap: anywhere">{{ location }}</div>
         <div class="row items-center" style="gap: 8px">

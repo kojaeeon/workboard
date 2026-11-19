@@ -40,8 +40,8 @@ export function confirm(message: string, ok = '계속'): Promise<boolean> {
       .onDismiss(() => resolve(false)),
   )
 }
-export function download(text: string, name: string, type = 'text/plain;charset=utf-8') {
-  const url = URL.createObjectURL(new Blob([text], { type }))
+export function download(content: string | Blob, name: string, type = 'text/plain;charset=utf-8') {
+  const url = URL.createObjectURL(content instanceof Blob ? content : new Blob([content], { type }))
   const a = document.createElement('a')
   a.href = url
   a.download = name

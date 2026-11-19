@@ -10,6 +10,8 @@ public class DocumentRepository {
 
   public record Document(long id, String title, String content, String updated_at) {}
 
+  public record DocumentSummary(long id, String title, String updated_at) {}
+
   public record Folder(long id, String path) {}
 
   private final JdbcClient db;
@@ -22,6 +24,13 @@ public class DocumentRepository {
     return db
       .sql("SELECT * FROM documents ORDER BY updated_at DESC,id DESC")
       .query(Document.class)
+      .list();
+  }
+
+  public List<DocumentSummary> summaries() {
+    return db
+      .sql("SELECT id,title,updated_at FROM documents ORDER BY updated_at DESC,id DESC")
+      .query(DocumentSummary.class)
       .list();
   }
 

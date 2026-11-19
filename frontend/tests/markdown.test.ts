@@ -15,3 +15,14 @@ it('indexes source lines while excluding YAML and code fences', () => {
     { level: 2, label: '두 번째 제목', line: 8 },
   ])
 })
+
+it('separates empty and CRLF frontmatter without dropping the body', () => {
+  expect(blocks('---\n---\n# Body')).toEqual([
+    { kind: 'frontmatter', source: '', language: 'yaml' },
+    { kind: 'markdown', source: '# Body' },
+  ])
+  expect(blocks('\uFEFF---\r\nsecret: hidden\r\n...\r\n# 본문')).toEqual([
+    { kind: 'frontmatter', source: 'secret: hidden', language: 'yaml' },
+    { kind: 'markdown', source: '# 본문' },
+  ])
+})

@@ -294,11 +294,29 @@ class DashboardIntegrationTest {
     )
       .path("id")
       .asLong();
-    assertThat(response(get("/api/documents")).toString()).contains("테스트 문서", "한글");
+    var listed = response(get("/api/documents")).valueStream()
+      .filter(row -> row.path("id").asLong() == id)
+      .findFirst()
+      .orElseThrow();
+    assertThat(listed.path("title").asText()).isEqualTo("테스트 문서");
+    assertThat(listed.path("updated_at").asText()).isNotBlank();
+    assertThat(listed.has("content")).isFalse();
+    assertThat(response(get("/api/documents/" + id)).path("content").asText()).isEqualTo("# 원본\n한글");
     assertThat(response(get("/api/documents/sample")).path("content").asText()).contains(
       "KJA_BOARD"
     );
     mvc.perform(delete("/api/documents/" + id)).andExpect(status().isOk());
+  }
+
+  @Test
+  void rejectsEmptyPdfBeforeLaunchingChromium() throws Exception {
+    mvc.perform(
+      post("/api/documents/pdf")
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(encode(Map.of("title", "빈 문서", "html", " ")))
+    )
+      .andExpect(status().isBadRequest())
+      .andExpect(jsonPath("$.message").value("PDF로 출력할 본문이 없습니다."));
   }
 
   @Test

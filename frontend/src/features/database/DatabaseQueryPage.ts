@@ -1,5 +1,5 @@
 import { defineComponent } from 'vue'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { api, act, confirm, download, error, success } from '../../shared/api'
 import MarkdownEditor from '../documents/MarkdownEditor.vue'
 import CommonGrid from '../../shared/CommonGrid.vue'
@@ -11,7 +11,7 @@ interface Source {
   location: string
 }
 interface Profile {
-  key: string
+  key: string | null
   location: string
   markdown: string
   revision: string | null
@@ -44,63 +44,78 @@ export default defineComponent({
           type: [-6, 5, 4, -5, 6, 7, 8, 2, 3].includes(c.jdbcType) ? 'number' : 'text',
         })) || [],
     )
-    watch(markdown, () => {
+    let loadRequest = 0
+    function discardResult() {
       if (result.value) emit('invalidate', result.value.id)
       result.value = undefined
+      detail.value = null
+    }
+    function editMarkdown(value: string) {
+      if (value === markdown.value) return
+      loadRequest++
+      markdown.value = value
+      discardResult()
       message.value = 'MD가 변경되었습니다. 설정을 확인하고 다시 조회하세요.'
-    })
+    }
     async function refresh() {
       const listing = await api<{ sources: Source[]; warnings: string[] }>('/database/profiles')
       sources.value = listing.sources
       listing.warnings.forEach((w) => error(new Error(w)))
     }
-    function apply(profile: Profile) {
+    function apply(profile: Profile, status: string) {
       key.value = profile.key
       selected.value = profile.key
       revision.value = profile.revision
-      markdown.value = profile.markdown
-      saved.value = profile.markdown
+      markdown.value = profile.markdown.replace(/\r\n?/g, '\n')
+      saved.value = markdown.value
       location.value = profile.location
-      message.value = 'MD를 불러왔습니다. 설정 확인 또는 SQL 실행을 누르세요.'
+      message.value = status
     }
-    async function load(value: string | null) {
-      if (!value) return
+    async function replaceProfile(read: () => Promise<Profile>, confirmation: string) {
+      if (busy.value) return
+      const request = ++loadRequest
       if (
         markdown.value !== saved.value &&
-        !(await confirm('저장하지 않은 MD 변경을 버리고 다른 문서를 여시겠습니까?'))
+        !(await confirm(confirmation))
       )
         return
-      await act(async () =>
-        apply(await api<Profile>('/database/profile?key=' + encodeURIComponent(value))),
+      if (request !== loadRequest) return
+      await act(async () => {
+        try {
+          const profile = await read()
+          if (request !== loadRequest) return
+          discardResult()
+          apply(profile, 'MD를 불러왔습니다. 설정 확인 또는 SQL 실행을 누르세요.')
+        } catch (failure) {
+          if (request === loadRequest) throw failure
+        }
+      })
+    }
+    function load(value: string | null) {
+      if (!value) return
+      return replaceProfile(
+        () => api<Profile>('/database/profile?key=' + encodeURIComponent(value)),
+        '저장하지 않은 MD 변경을 버리고 다른 문서를 여시겠습니까?',
       )
     }
-    async function upload(event: Event) {
+    function upload(event: Event) {
       const input = event.target as HTMLInputElement,
         file = input.files?.[0]
       if (!file) return
-      try {
+      input.value = ''
+      return replaceProfile(async () => {
         if (file.size > 2097152) throw new Error('2MB 이하 MD 파일만 지원합니다.')
-        const content = new TextDecoder('utf-8', { fatal: true }).decode(await file.arrayBuffer())
-        if (
-          markdown.value !== saved.value &&
-          !(await confirm('저장하지 않은 MD 변경을 버리고 파일을 불러오시겠습니까?'))
-        )
-          return
-        key.value = null
-        selected.value = null
-        revision.value = null
-        markdown.value = content
-        saved.value = content
-        location.value = '불러온 파일 · 저장하면 SQLite 문서로 등록'
-        message.value = 'MD를 불러왔습니다.'
-      } catch (e) {
-        error(e)
-      } finally {
-        input.value = ''
-      }
+        return {
+          key: null,
+          revision: null,
+          location: '불러온 파일 · 저장하면 SQLite 문서로 등록',
+          markdown: new TextDecoder('utf-8', { fatal: true }).decode(await file.arrayBuffer()),
+        }
+      }, '저장하지 않은 MD 변경을 버리고 파일을 불러오시겠습니까?')
     }
     async function save() {
       if (busy.value) return
+      loadRequest++
       busy.value = 'save'
       try {
         await act(async () => {
@@ -109,7 +124,7 @@ export default defineComponent({
             revision: revision.value,
             markdown: markdown.value,
           })
-          apply(profile)
+          apply(profile, 'DB 조회 MD를 저장했습니다.')
           await refresh()
           success('DB 조회 MD를 저장했습니다.')
         })
@@ -119,11 +134,11 @@ export default defineComponent({
     }
     async function execute(kind: 'validate' | 'connect' | 'query') {
       if (busy.value) return
+      loadRequest++
       busy.value = kind
       try {
         if (kind === 'query') {
-          if (result.value) emit('invalidate', result.value.id)
-          result.value = undefined
+          discardResult()
           result.value = await api<QueryResult>('/database/query', 'POST', {
             markdown: markdown.value,
           })
@@ -152,12 +167,10 @@ export default defineComponent({
         busy.value = ''
       }
     }
-    onMounted(() =>
-      act(async () => {
-        await refresh()
-        await load(selected.value)
-      }),
-    )
+    onMounted(() => {
+      void act(refresh)
+      void load(selected.value)
+    })
 
     return {
       act,
@@ -168,6 +181,7 @@ export default defineComponent({
       key,
       location,
       markdown,
+      editMarkdown,
       busy,
       message,
       result,

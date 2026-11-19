@@ -1,9 +1,15 @@
 package com.kojaeeon.dashboard.documents;
 
+import com.kojaeeon.dashboard.shared.ApiErrors;
+import com.microsoft.playwright.PlaywrightException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -11,17 +17,21 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/documents")
 public class DocumentController {
 
+  private static final Logger log = LoggerFactory.getLogger(DocumentController.class);
   private final DocumentRepository repository;
   private final LocalDocumentService files;
+  private final DocumentPdf pdf;
   private final Path examples;
 
   public DocumentController(
     DocumentRepository repository,
     LocalDocumentService files,
+    DocumentPdf pdf,
     @Value("${dashboard.examples-path}") String examples
   ) {
     this.repository = repository;
     this.files = files;
+    this.pdf = pdf;
     this.examples = Path.of(examples);
   }
 
@@ -31,9 +41,39 @@ public class DocumentController {
 
   public record SaveFile(String path, String revision, String content) {}
 
+  public record PdfInput(String title, String html) {}
+
   @GetMapping
-  public List<DocumentRepository.Document> list() {
-    return repository.list();
+  public List<DocumentRepository.DocumentSummary> list() {
+    return repository.summaries();
+  }
+
+  @GetMapping("/{id}")
+  public DocumentRepository.Document get(@PathVariable long id) {
+    return repository.get(id);
+  }
+
+  @PostMapping("/pdf")
+  public ResponseEntity<?> exportPdf(@RequestBody PdfInput input) {
+    try {
+      byte[] content = pdf.render(input.title(), input.html());
+      return ResponseEntity.ok()
+        .contentType(MediaType.APPLICATION_PDF)
+        .cacheControl(CacheControl.noStore())
+        .header(
+          HttpHeaders.CONTENT_DISPOSITION,
+          ContentDisposition.attachment()
+            .filename(DocumentPdf.filename(input.title()), StandardCharsets.UTF_8)
+            .build()
+            .toString()
+        )
+        .body(content);
+    } catch (PlaywrightException failure) {
+      log.warn("PDF rendering failed", failure);
+      return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ApiErrors.Error(
+        "PDF 출력에 실패했습니다. Chromium 설치 또는 DASHBOARD_PDF_CHROMIUM_PATH 설정을 확인하세요."
+      ));
+    }
   }
 
   @PostMapping

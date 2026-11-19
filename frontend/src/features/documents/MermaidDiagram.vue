@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
-import mermaid from 'mermaid'
 import fullscreen from './mermaidFullscreen.js'
 import { download, error } from '../../shared/api'
+import { renderMermaid } from './renderMermaid'
 const props = defineProps<{ source: string; theme: string }>()
 const root = ref<HTMLElement>(),
   failure = ref('')
@@ -11,15 +11,9 @@ let generation = 0,
 async function render() {
   const version = ++generation
   try {
-    const output = await enqueue(async () => {
-      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: props.theme as any })
-      return await mermaid.render(
-        'diagram_' + crypto.randomUUID().replaceAll('-', ''),
-        props.source,
-      )
-    })
+    const svg = await renderMermaid(props.source, props.theme)
     if (version === generation && !disposed && root.value) {
-      root.value.innerHTML = output.svg
+      root.value.innerHTML = svg
       failure.value = ''
     }
   } catch (e) {
@@ -54,23 +48,24 @@ onBeforeUnmount(() => {
   generation++
 })
 </script>
-<script lang="ts">
-let queue: Promise<unknown> = Promise.resolve()
-function enqueue<T>(task: () => Promise<T>): Promise<T> {
-  const result = queue.then(task)
-  queue = result.catch(() => {})
-  return result
-}
-</script>
 <template>
   <div class="column full-width" style="gap: 4px">
     <div class="row justify-end">
       <q-btn flat round dense icon="fullscreen" aria-label="Mermaid 전체화면" @click="open" /><q-btn
         flat
+        round
         dense
-        label="SVG 출력"
+        aria-label="SVG 출력"
+        icon="image"
         @click="exportDiagram('svg')"
-      /><q-btn flat dense label="HTML 출력" @click="exportDiagram('html')" />
+      ><q-tooltip>SVG 출력</q-tooltip></q-btn><q-btn
+        flat
+        round
+        dense
+        aria-label="HTML 출력"
+        icon="html"
+        @click="exportDiagram('html')"
+      ><q-tooltip>HTML 출력</q-tooltip></q-btn>
     </div>
     <div v-if="failure" role="alert" class="text-negative" style="white-space: pre-wrap">
       {{ failure }}

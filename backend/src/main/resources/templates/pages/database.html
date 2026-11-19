@@ -52,7 +52,8 @@
         경로는 대시보드 실행 폴더 기준입니다.
       </div>
       <markdown-editor
-        v-model="markdown"
+        :model-value="markdown"
+        @update:model-value="editMarkdown"
         :dark="dark"
         height="560px"
         :disabled="!!busy"

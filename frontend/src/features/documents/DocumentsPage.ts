@@ -4,10 +4,13 @@ import { api, act, confirm, success, error } from '../../shared/api'
 import MarkdownEditor from './MarkdownEditor.vue'
 import MarkdownPreview from './MarkdownPreview.vue'
 import { headings } from './markdown'
+import { exportMarkdownPdf } from './markdownPdf'
 import './DocumentsPage.css'
-interface Document {
+interface DocumentSummary {
   id: number
   title: string
+}
+interface Document extends DocumentSummary {
   content: string
 }
 interface LocalFile {
@@ -30,13 +33,14 @@ export default defineComponent({
     dark: { type: Boolean, required: true },
   },
   setup() {
-    const documents = ref<Document[]>([]),
+    const documents = ref<DocumentSummary[]>([]),
       folders = ref<Folder[]>([]),
       folderPath = ref(''),
       library = ref(true),
       mode = ref('render'),
       indexOpen = ref(false),
-      busy = ref(false)
+      busy = ref(false),
+      pdfBusy = ref(false)
     const document = reactive({ id: null as number | null, title: '시작하기', content: '' }),
       local = ref<LocalFile | null>(null),
       location = ref('저장 위치: SQLite 문서'),
@@ -45,9 +49,12 @@ export default defineComponent({
       previewRoot = ref<HTMLElement>()
     const entries = computed(() => headings(document.content))
     let generation = 0
+    let openRequest = 0
+    let requestedStoredId: number | undefined
+    const uploadRequests = new WeakMap<File, number>()
     async function refreshLibrary() {
       const results = await Promise.all([
-        api<Document[]>('/documents'),
+        api<DocumentSummary[]>('/documents'),
         api<Folder[]>('/documents/folders'),
       ])
       documents.value = results[0]
@@ -64,9 +71,23 @@ export default defineComponent({
       location.value = '저장 위치: SQLite 문서'
       preview.value = document.content
     }
-    async function openLocal(path: string) {
+    async function load<T>(path: string, apply: (item: T) => void, storedId?: number) {
+      const request = ++openRequest
+      requestedStoredId = storedId
       await act(async () => {
-        const file = await api<LocalFile>('/documents/local?path=' + encodeURIComponent(path))
+        try {
+          const item = await api<T>(path)
+          if (request === openRequest) apply(item)
+        } catch (failure) {
+          if (request === openRequest) throw failure
+        }
+      })
+    }
+    function openStored(id: number) {
+      return load<Document>(`/documents/${id}`, open, id)
+    }
+    function openLocal(path: string) {
+      return load<LocalFile>('/documents/local?path=' + encodeURIComponent(path), (file) => {
         open(file)
         local.value = file
         location.value = '저장 위치: ' + file.path
@@ -109,13 +130,30 @@ export default defineComponent({
       }
     }
     async function remove() {
-      if (document.id === null) return
+      const id = document.id
+      if (id === null || busy.value) return
       if (await confirm('이 문서를 삭제할까요?', '삭제'))
         await act(async () => {
-          await api(`/documents/${document.id}`, 'DELETE')
-          open({ title: '새 문서', content: '' })
+          await api(`/documents/${id}`, 'DELETE')
+          if (requestedStoredId === id) {
+            openRequest++
+            requestedStoredId = undefined
+          }
+          if (document.id === id) open({ title: '새 문서', content: '' })
           await refreshLibrary()
         })
+    }
+    async function exportPdf() {
+      if (pdfBusy.value) return
+      pdfBusy.value = true
+      try {
+        await act(async () => {
+          await exportMarkdownPdf(document.title, document.content)
+          success('PDF 파일을 내려받았습니다.')
+        })
+      } finally {
+        pdfBusy.value = false
+      }
     }
     async function register() {
       await act(async () => {
@@ -156,16 +194,21 @@ export default defineComponent({
       }
     }
     const basename = (path: string) => path.split(/[\\/]/).pop() || path
-    function uploaded(info: { xhr: XMLHttpRequest }) {
+    function trackUpload(files: File[]) {
+      requestedStoredId = undefined
+      for (const file of files) uploadRequests.set(file, ++openRequest)
+    }
+    function uploaded(info: { files: File[]; xhr: XMLHttpRequest }) {
+      if (uploadRequests.get(info.files[0]) !== openRequest) return
       open(JSON.parse(info.xhr.responseText))
       location.value = '저장 위치: SQLite 문서 (불러온 파일의 원본 경로는 제공되지 않습니다)'
     }
-    onMounted(() =>
-      act(async () => {
-        await refreshLibrary()
-        open(await api<{ title: string; content: string }>('/documents/sample'))
-      }),
-    )
+    onMounted(() => {
+      void act(refreshLibrary)
+      void load<{ title: string; content: string }>('/documents/sample', (item) => {
+        if (document.title === '시작하기' && !document.content) open(item)
+      })
+    })
 
     return {
       act,
@@ -177,6 +220,7 @@ export default defineComponent({
       mode,
       indexOpen,
       busy,
+      pdfBusy,
       document,
       location,
       preview,
@@ -184,16 +228,18 @@ export default defineComponent({
       previewRoot,
       entries,
       refreshLibrary,
-      open,
+      openStored,
       openLocal,
       setMode,
       save,
+      exportPdf,
       remove,
       register,
       unregister,
       jump,
       jumpEnd,
       basename,
+      trackUpload,
       uploaded,
     }
   },
